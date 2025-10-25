@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pop Culture Movies</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <div class="hero-inner">
+        <h1>Pop Culture Movies</h1>
+        <p class="tagline">A colorful, fun showcase of fan-favorite films.</p>
+        <div class="controls">
+          <input id="search" type="search" placeholder="Search movies..." aria-label="Search movies">
+          <button id="clear">Clear</button>
+        </div>
+        <div class="add-movie">
+          <input id="new-movie" type="text" placeholder="Type a movie title and press Enter or Add" aria-label="Add movie">
+          <button id="add-movie" class="btn primary">Add</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="content">
+      <h2>Movies</h2>
+      <div id="movies" class="grid"></div>
+      <p id="loading" class="loading">Loading movies...</p>
+    </section>
+
+    <footer class="footer">
+      <p>© Pop Culture Movies</p>
+    </footer>
+  </main>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
