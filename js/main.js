@@ -9,6 +9,7 @@ const addMovieBtn = document.getElementById('add-movie');
 let movies = [];
 let favorites = new Set(JSON.parse(localStorage.getItem('favorites') || '[]'));
 let custom = JSON.parse(localStorage.getItem('customMovies') || '[]');
+let imdbTop = [];
 
 function saveCustom(){
   localStorage.setItem('customMovies', JSON.stringify(custom));
@@ -58,7 +59,12 @@ function createCard(movie){
   const imdb = document.createElement('a');
   imdb.className = 'btn secondary';
   imdb.textContent = 'IMDb';
-  imdb.href = `https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}`;
+  // prefer direct imdbId when available, otherwise fall back to search
+  if(movie.imdbId){
+    imdb.href = `https://www.imdb.com/title/${movie.imdbId}/`;
+  }else{
+    imdb.href = `https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}`;
+  }
   imdb.target = '_blank';
   imdb.rel = 'noopener noreferrer';
 
@@ -90,9 +96,32 @@ async function load(){
   try{
     const res = await fetch(API);
     movies = await res.json();
-  // merge custom movies at the front
-  const merged = [...custom.map((t,i)=>({id:`custom-${i}`, title:t, description:'User added movie', image:''})), ...movies];
-  render(merged);
+    // try load local IMDb top list (cached JSON)
+    try{
+      const r2 = await fetch('data/imdb-top.json');
+      imdbTop = await r2.json();
+    }catch(e){
+      console.warn('Could not load imdb-top.json', e);
+      imdbTop = [];
+    }
+
+    // convert imdbTop entries into movie-like objects (keep rank for ordering)
+    const imdbItems = imdbTop.map(item => ({
+      id: item.imdbId || `imdb-${item.rank}`,
+      title: item.title,
+      description: `IMDb Top ${item.rank}`,
+      image: `https://m.media-amazon.com/images/M/MV5B${item.imdbId || ''}.jpg`,
+      imdbId: item.imdbId,
+      source: 'imdb'
+    }));
+
+    // merge: custom (front) -> imdbTop -> API movies
+    const merged = [
+      ...custom.map((t,i)=>({id:`custom-${i}`, title:t, description:'User added movie', image:''})),
+      ...imdbItems,
+      ...movies
+    ];
+    render(merged);
   }catch(e){
     moviesEl.innerHTML = '<p class="loading">Failed to load movies.</p>';
   }finally{
@@ -102,7 +131,8 @@ async function load(){
 
 searchEl.addEventListener('input', (e) => {
   const q = e.target.value.toLowerCase().trim();
-  const source = [...custom.map((t,i)=>({id:`custom-${i}`, title:t, description:'User added movie', image:''})), ...movies];
+  const imdbItems = imdbTop.map(item => ({id: item.imdbId || `imdb-${item.rank}`, title: item.title, description:`IMDb Top ${item.rank}`, image:'', imdbId: item.imdbId}));
+  const source = [...custom.map((t,i)=>({id:`custom-${i}`, title:t, description:'User added movie', image:''})), ...imdbItems, ...movies];
   const filtered = source.filter(m => (m.title||'').toLowerCase().includes(q) || (m.description||'').toLowerCase().includes(q));
   render(filtered);
 });
@@ -116,7 +146,8 @@ function addCustomMovie(title){
   custom.unshift(trimmed);
   saveCustom();
   // re-render with custom at front
-  const merged = [...custom.map((t,i)=>({id:`custom-${i}`, title:t, description:'User added movie', image:''})), ...movies];
+  const imdbItems = imdbTop.map(item => ({id: item.imdbId || `imdb-${item.rank}`, title: item.title, description:`IMDb Top ${item.rank}`, image:'', imdbId: item.imdbId}));
+  const merged = [...custom.map((t,i)=>({id:`custom-${i}`, title:t, description:'User added movie', image:''})), ...imdbItems, ...movies];
   render(merged);
 }
 
