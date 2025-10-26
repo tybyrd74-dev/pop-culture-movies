@@ -19,6 +19,48 @@ function saveFavorites(){
   localStorage.setItem('favorites', JSON.stringify(Array.from(favorites)));
 }
 
+// --- Lightbox / image preview (top-level helpers) ---
+function createLightbox(){
+  if(document.getElementById('lightbox-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'lightbox-overlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="lightbox-dialog" role="dialog" aria-modal="true" aria-label="Image preview">
+      <button class="lightbox-close" aria-label="Close">&times;</button>
+      <img class="lightbox-image" src="" alt="">
+      <div class="lightbox-caption"></div>
+    </div>
+  `;
+  // close when clicking the overlay (but not the dialog)
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeLightbox(); });
+  document.body.appendChild(overlay);
+  const closeBtn = overlay.querySelector('.lightbox-close');
+  if(closeBtn) closeBtn.addEventListener('click', closeLightbox);
+  // keyboard: Escape to close
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
+}
+
+function openLightbox(src, title){
+  const overlay = document.getElementById('lightbox-overlay');
+  if(!overlay) return;
+  const img = overlay.querySelector('.lightbox-image');
+  const cap = overlay.querySelector('.lightbox-caption');
+  img.src = src || '';
+  img.alt = title || '';
+  cap.textContent = title || '';
+  overlay.style.display = 'flex';
+  // trigger transition
+  requestAnimationFrame(()=> overlay.classList.add('open'));
+}
+
+function closeLightbox(){
+  const overlay = document.getElementById('lightbox-overlay');
+  if(!overlay) return;
+  overlay.classList.remove('open');
+  setTimeout(()=>{ overlay.style.display = 'none'; const img = overlay.querySelector('.lightbox-image'); if(img) img.src = ''; }, 220);
+}
+
 function createCard(movie){
   const div = document.createElement('div');
   div.className = 'movie-card';
@@ -30,6 +72,7 @@ function createCard(movie){
   const meta = document.createElement('div');
   meta.className = 'movie-meta';
 
+  // ...lightbox helpers are top-level (created once)
   const h3 = document.createElement('h3');
   h3.textContent = movie.title;
 
@@ -79,6 +122,13 @@ function createCard(movie){
   div.appendChild(img);
   div.appendChild(meta);
 
+  // wire image click to open the global lightbox
+  img.style.cursor = 'pointer';
+  img.addEventListener('click', () => {
+    createLightbox();
+    openLightbox(img.src, movie.title);
+  });
+
   return div;
 }
 
@@ -127,6 +177,10 @@ async function load(){
   }finally{
     loadingEl.style.display = 'none';
   }
+
+  // make images interactive: open lightbox on click
+  img.style.cursor = 'pointer';
+  img.addEventListener('click', () => openLightbox(img.src, movie.title));
 }
 
 searchEl.addEventListener('input', (e) => {
@@ -154,4 +208,6 @@ function addCustomMovie(title){
 addMovieBtn.addEventListener('click', () => { addCustomMovie(newMovieEl.value); newMovieEl.value=''; });
 newMovieEl.addEventListener('keydown', (e) => { if(e.key==='Enter'){ addCustomMovie(newMovieEl.value); newMovieEl.value=''; } });
 
+// prepare lightbox and then load movies
+createLightbox();
 load();
